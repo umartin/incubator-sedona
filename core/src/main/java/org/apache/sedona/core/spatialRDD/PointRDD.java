@@ -20,6 +20,7 @@
 package org.apache.sedona.core.spatialRDD;
 
 import org.apache.sedona.core.enums.FileDataSplitter;
+import org.apache.sedona.core.enums.GeometryType;
 import org.apache.sedona.core.formatMapper.FormatMapper;
 import org.apache.sedona.core.formatMapper.PointFormatMapper;
 import org.apache.spark.api.java.JavaRDD;
@@ -42,7 +43,8 @@ public class PointRDD
     /**
      * Instantiates a new point RDD.
      */
-    public PointRDD() {}
+    public PointRDD() {
+    }
 
     /**
      * Instantiates a new point RDD.

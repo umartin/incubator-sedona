@@ -19,6 +19,7 @@
 
 package org.apache.sedona.core.spatialRDD;
 
+import org.apache.sedona.core.enums.GeometryType;
 import org.apache.sedona.core.geometryObjects.Circle;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;

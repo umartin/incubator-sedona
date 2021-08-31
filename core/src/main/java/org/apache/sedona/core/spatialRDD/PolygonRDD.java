@@ -20,6 +20,7 @@
 package org.apache.sedona.core.spatialRDD;
 
 import org.apache.sedona.core.enums.FileDataSplitter;
+import org.apache.sedona.core.enums.GeometryType;
 import org.apache.sedona.core.formatMapper.FormatMapper;
 import org.apache.sedona.core.formatMapper.PolygonFormatMapper;
 import org.apache.spark.api.java.JavaRDD;
@@ -50,15 +51,16 @@ public class PolygonRDD
     /**
      * Instantiates a new polygon RDD.
      */
-    public PolygonRDD() {}
+    public PolygonRDD() {
+        this(null);
+    }
 
     /**
      * Instantiates a new polygon RDD.
      *
      * @param rawSpatialRDD the raw spatial RDD
      */
-    public PolygonRDD(JavaRDD<Polygon> rawSpatialRDD)
-    {
+    public PolygonRDD(JavaRDD<Polygon> rawSpatialRDD) {
         this.rawSpatialRDD = rawSpatialRDD;
     }
 
@@ -69,8 +71,7 @@ public class PolygonRDD
      * @param sourceEpsgCRSCode the source epsg CRS code
      * @param targetEpsgCode the target epsg code
      */
-    public PolygonRDD(JavaRDD<Polygon> rawSpatialRDD, String sourceEpsgCRSCode, String targetEpsgCode)
-    {
+    public PolygonRDD(JavaRDD<Polygon> rawSpatialRDD, String sourceEpsgCRSCode, String targetEpsgCode) {
         this.rawSpatialRDD = rawSpatialRDD;
         this.CRSTransform(sourceEpsgCRSCode, targetEpsgCode);
     }

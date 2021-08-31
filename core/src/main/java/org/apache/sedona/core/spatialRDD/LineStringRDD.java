@@ -20,6 +20,7 @@
 package org.apache.sedona.core.spatialRDD;
 
 import org.apache.sedona.core.enums.FileDataSplitter;
+import org.apache.sedona.core.enums.GeometryType;
 import org.apache.sedona.core.formatMapper.FormatMapper;
 import org.apache.sedona.core.formatMapper.LineStringFormatMapper;
 import org.apache.spark.api.java.JavaRDD;
@@ -40,15 +41,16 @@ public class LineStringRDD
     /**
      * Instantiates a new line string RDD.
      */
-    public LineStringRDD() {}
+    public LineStringRDD() {
+        this(null);
+    }
 
     /**
      * Instantiates a new line string RDD.
      *
      * @param rawSpatialRDD the raw spatial RDD
      */
-    public LineStringRDD(JavaRDD<LineString> rawSpatialRDD)
-    {
+    public LineStringRDD(JavaRDD<LineString> rawSpatialRDD) {
         this.rawSpatialRDD = rawSpatialRDD;
     }
 
