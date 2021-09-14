@@ -23,6 +23,7 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.sedona.core.utils.HalfOpenRectangle;
 import org.apache.spark.TaskContext;
+import org.apache.spark.broadcast.Broadcast;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
@@ -33,6 +34,7 @@ import javax.annotation.Nullable;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Base class for partition level join implementations.
@@ -57,10 +59,12 @@ import java.util.List;
 abstract class JudgementBase
         implements Serializable
 {
+    interface SerializableSupplier extends Supplier<DedupParams>, Serializable {}
+
     private static final Logger log = LogManager.getLogger(JudgementBase.class);
 
     private final boolean considerBoundaryIntersection;
-    private final DedupParams dedupParams;
+    private final SerializableSupplier dedupParams;
 
     transient private HalfOpenRectangle extent;
 
@@ -71,7 +75,17 @@ abstract class JudgementBase
     protected JudgementBase(boolean considerBoundaryIntersection, @Nullable DedupParams dedupParams)
     {
         this.considerBoundaryIntersection = considerBoundaryIntersection;
-        this.dedupParams = dedupParams;
+        this.dedupParams = () -> dedupParams;
+    }
+
+    /**
+     * @param considerBoundaryIntersection true for 'intersects', false for 'contains' join condition
+     * @param dedupParams Optional information to activate de-dup logic
+     */
+    protected JudgementBase(boolean considerBoundaryIntersection, @Nullable Broadcast<DedupParams> dedupParams)
+    {
+        this.considerBoundaryIntersection = considerBoundaryIntersection;
+        this.dedupParams = () -> dedupParams.getValue();
     }
 
     /**
@@ -83,13 +97,13 @@ abstract class JudgementBase
      */
     protected void initPartition()
     {
-        if (dedupParams == null) {
+        if (dedupParams.get() == null) {
             return;
         }
 
         final int partitionId = TaskContext.getPartitionId();
 
-        final List<Envelope> partitionExtents = dedupParams.getPartitionExtents();
+        final List<Envelope> partitionExtents = dedupParams.get().getPartitionExtents();
         if (partitionId < partitionExtents.size()) {
             extent = new HalfOpenRectangle(partitionExtents.get(partitionId));
         }

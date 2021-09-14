@@ -38,9 +38,11 @@ import org.apache.sedona.core.utils.GeomUtils;
 import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFunction;
 import org.apache.sedona.core.monitoring.Metrics;
+import org.apache.spark.broadcast.Broadcast;
 import org.locationtech.jts.geom.Geometry;
 import scala.Tuple2;
 

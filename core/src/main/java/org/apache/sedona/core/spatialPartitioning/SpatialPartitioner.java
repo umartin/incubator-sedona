@@ -22,6 +22,8 @@ package org.apache.sedona.core.spatialPartitioning;
 import org.apache.sedona.core.enums.GridType;
 import org.apache.sedona.core.joinJudgement.DedupParams;
 import org.apache.spark.Partitioner;
+import org.apache.spark.SparkContext;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import scala.Tuple2;
@@ -74,5 +76,9 @@ abstract public class SpatialPartitioner
     public int getPartition(Object key)
     {
         return (int) key;
+    }
+
+    public SpatialPartitioner broadcast(SparkContext cxt) {
+        return new SpatialPartitionerWrapper(new JavaSparkContext(cxt).broadcast(this));
     }
 }

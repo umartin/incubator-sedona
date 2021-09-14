@@ -34,11 +34,14 @@ import org.apache.sedona.core.spatialRddTool.IndexBuilder;
 import org.apache.sedona.core.spatialRddTool.StatCalculator;
 import org.apache.sedona.core.utils.GeomUtils;
 import org.apache.sedona.core.utils.RDDSampleUtils;
+import org.apache.spark.Partitioner;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
+import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.util.random.SamplingUtils;
 import org.geotools.geometry.jts.JTS;
@@ -271,6 +274,7 @@ public class SpatialRDD<T extends Geometry>
                 throw new Exception("[AbstractSpatialRDD][spatialPartitioning] Unsupported spatial partitioning method. " +
                         "The following partitioning methods are not longer supported: R-Tree, Hilbert curve, Voronoi, Equal-Grids");
         }
+        partitioner = partitioner.broadcast(rawSpatialRDD.context());
 
         this.spatialPartitionedRDD = partition(partitioner);
     }

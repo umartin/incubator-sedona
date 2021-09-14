@@ -69,6 +69,16 @@
         <dependency.scope>provided</dependency.scope>
         <jts.version>1.18.0</jts.version>
         <jts2geojson.version>0.16.1</jts2geojson.version>
+        <scala>2.12</scala>
+        <spark>3.0</spark>
+        <scala.version>2.12.8</scala.version>
+        <scala.compat.version>2.12</scala.compat.version>
+        <scaladoc.arg>-no-java-comments</scaladoc.arg>
+        <spark.version>3.1.1</spark.version>
+        <spark.compat.version>3.0</spark.compat.version>
+        <spark.converter.version>spark3</spark.converter.version>
+        <jackson.version>2.10.0</jackson.version>
+        <maven.deploy.skip>false</maven.deploy.skip>
     </properties>
 
     <dependencies>

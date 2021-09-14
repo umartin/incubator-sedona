@@ -23,6 +23,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.function.FlatMapFunction2;
+import org.apache.spark.broadcast.Broadcast;
 import org.locationtech.jts.geom.Geometry;
 
 import javax.annotation.Nullable;
@@ -42,6 +43,13 @@ public class NestedLoopJudgement<T extends Geometry, U extends Geometry>
      * @see JudgementBase
      */
     public NestedLoopJudgement(boolean considerBoundaryIntersection, @Nullable DedupParams dedupParams)
+    {
+        super(considerBoundaryIntersection, dedupParams);
+    }
+    /**
+     * @see JudgementBase
+     */
+    public NestedLoopJudgement(boolean considerBoundaryIntersection, @Nullable Broadcast<DedupParams> dedupParams)
     {
         super(considerBoundaryIntersection, dedupParams);
     }
