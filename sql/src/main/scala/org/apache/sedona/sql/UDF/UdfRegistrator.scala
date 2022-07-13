@@ -20,7 +20,12 @@ package org.apache.sedona.sql.UDF
 
 import org.apache.spark.sql.{SQLContext, SparkSession, functions}
 import org.apache.spark.sql.catalyst.FunctionIdentifier
-import org.apache.spark.sql.catalyst.expressions.ExpressionInfo
+import org.apache.spark.sql.catalyst.analysis.FunctionRegistryBase
+import org.apache.spark.sql.catalyst.expressions.{Expression, ExpressionInfo}
+import org.apache.spark.sql.sedona_sql.expressions.{ST_GeomFromWKB, ST_GeomFromWKT}
+
+import scala.reflect.runtime.universe.typeTag
+import scala.reflect.{ClassTag, classTag}
 
 object UdfRegistrator {
 
@@ -29,18 +34,40 @@ object UdfRegistrator {
   }
 
   def registerAll(sparkSession: SparkSession): Unit = {
-    Catalog.expressions.foreach(f => {
-      val functionIdentifier = FunctionIdentifier(f.getClass.getSimpleName.dropRight(1))
-      val expressionInfo = new ExpressionInfo(
-        f.getClass.getCanonicalName,
-        functionIdentifier.database.orNull,
-        functionIdentifier.funcName)
-      sparkSession.sessionState.functionRegistry.registerFunction(
-        functionIdentifier,
-        expressionInfo,
-        f
-      )
+//    Catalog.expressions.foreach(f => {
+//      val functionIdentifier = FunctionIdentifier(f.getClass.getSimpleName.dropRight(1))
+//      val expressionInfo = new ExpressionInfo(
+//        f.getClass.getCanonicalName,
+//        functionIdentifier.database.orNull,
+//        functionIdentifier.funcName)
+//      sparkSession.sessionState.functionRegistry.registerFunction(
+//        functionIdentifier,
+//        expressionInfo,
+//        f
+//      )
+//    })
+
+    val x = Seq(Int, Long)
+
+    def register(clazz: Class[_]): Any = {
+      //val clazz = scala.reflect.classTag[T].runtimeClass
+      val name = clazz.getSimpleName.dropRight(1)
+      print(name + " " + ClassTag(clazz) + "\n")
+      val (expressionInfo, builder) = FunctionRegistryBase.build(name, None)(ClassTag(clazz))
+      val newBuilder = (expressions: Seq[Expression]) => {
+        builder(expressions)
+      }
+      sparkSession.sessionState.functionRegistry.registerFunction(FunctionIdentifier(name), expressionInfo, newBuilder)
+
+    }
+    Catalog.expressions.foreach(t => {
+      register(t.getClass)
     })
+    register(classOf[ST_GeomFromWKB])
+    register(classOf[ST_GeomFromWKT])
+//    register(classOf[ST_GeomFromWKB])
+//    register(ST_GeomFromWKT]("ST_GeomFromWKT")
+
 Catalog.aggregateExpressions.foreach(f => sparkSession.udf.register(f.getClass.getSimpleName, functions.udaf(f))) // SPARK3 anchor
 //Catalog.aggregateExpressions_UDAF.foreach(f => sparkSession.udf.register(f.getClass.getSimpleName, f)) // SPARK2 anchor
   }

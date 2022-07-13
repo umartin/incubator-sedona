@@ -22,16 +22,39 @@ import org.apache.sedona.core.enums.{FileDataSplitter, GeometryType}
 import org.apache.sedona.core.formatMapper.FormatMapper
 import org.apache.sedona.sql.utils.GeometrySerializer
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
+import org.apache.spark.sql.catalyst.expressions.{ExpectsInputTypes, Expression, ImplicitCastInputTypes, UnaryExpression}
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
+import org.apache.spark.sql.catalyst.trees.UnaryLike
 import org.apache.spark.sql.catalyst.util.GenericArrayData
 import org.apache.spark.sql.sedona_sql.UDT.GeometryUDT
 import org.apache.spark.sql.sedona_sql.expressions.geohash.GeoHashDecoder
 import org.apache.spark.sql.sedona_sql.expressions.implicits.{GeometryEnhancer, InputExpressionEnhancer, SequenceEnhancer}
-import org.apache.spark.sql.types.{BinaryType, DataType, Decimal, StringType}
+import org.apache.spark.sql.types.{AbstractDataType, BinaryType, DataType, Decimal, StringType, TypeCollection}
 import org.apache.spark.unsafe.types.UTF8String
-import org.locationtech.jts.geom.{Coordinate, GeometryFactory}
+import org.locationtech.jts.geom.{Coordinate, Geometry, GeometryFactory}
 import org.locationtech.jts.io.WKBReader
+
+abstract class UnaryGeometryConstructor extends Expression with CodegenFallback with ExpectsInputTypes {
+  def inputExpressions: Seq[Expression]
+
+  override def eval(input: InternalRow): Any = {
+    val value = inputExpressions.head.eval(input);
+    if (value == null) {
+      null
+    } else {
+      nullSafeEval(value)
+    }
+  }
+
+  protected def nullSafeEval(input: Any): Any
+
+  override def nullable: Boolean = children.head.nullable
+
+  override def foldable: Boolean = children.head.foldable
+
+  override def dataType: DataType = GeometryUDT
+}
 
 /**
   * Return a point from a string. The string must be plain string and each coordinate must be separated by a delimiter.
@@ -168,30 +191,27 @@ case class ST_LineStringFromText(inputExpressions: Seq[Expression])
   * @param inputExpressions This function takes 1 parameter which is the geometry string. The string format must be WKT.
   */
 case class ST_GeomFromWKT(inputExpressions: Seq[Expression])
-  extends Expression with CodegenFallback with UserDataGeneratator {
-  // This is an expression which takes one input expressions
-  assert(inputExpressions.length == 1)
+  extends UnaryGeometryConstructor with UnaryLike[Expression] {
 
-  override def nullable: Boolean = true
+  override def inputTypes: Seq[DataType] = Seq(StringType)
 
-  override def eval(inputRow: InternalRow): Any = {
-    (inputExpressions(0).eval(inputRow)) match {
-      case (geomString: UTF8String) => {
-        var fileDataSplitter = FileDataSplitter.WKT
-        var formatMapper = new FormatMapper(fileDataSplitter, false)
-        formatMapper.readGeometry(geomString.toString).toGenericArrayData
-      }
-      case _ => null
-    }
+  protected override def nullSafeEval(input: Any): Any = {
+    val geomString = input.asInstanceOf[UTF8String]
+    var fileDataSplitter = FileDataSplitter.WKT
+    var formatMapper = new FormatMapper(fileDataSplitter, false)
+    formatMapper.readGeometry(geomString.toString).toGenericArrayData
   }
 
-  override def dataType: DataType = GeometryUDT
+  override def child: Expression = inputExpressions.head
 
-  override def children: Seq[Expression] = inputExpressions
-
-  protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]) = {
-    copy(inputExpressions = newChildren)
+  override protected def withNewChildInternal(input: Expression): Expression = {
+    copy(inputExpressions = IndexedSeq(input))
   }
+//  override def children: Seq[Expression] = inputExpressions
+//
+//  protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]) = {
+//    copy(inputExpressions = newChildren)
+//  }
 }
 
 
@@ -233,15 +253,17 @@ case class ST_GeomFromText(inputExpressions: Seq[Expression])
   *
   * @param inputExpressions This function takes 1 parameter which is the utf-8 encoded geometry wkb string or the binary wkb array.
   */
-case class ST_GeomFromWKB(inputExpressions: Seq[Expression])
-  extends Expression with CodegenFallback with UserDataGeneratator {
+case class ST_GeomFromWKB(inputExpressions: Expression)
+  extends UnaryExpression with CodegenFallback with UserDataGeneratator with ExpectsInputTypes {
   // This is an expression which takes one input expressions
-  assert(inputExpressions.length == 1)
+  // assert(inputExpressions.length == 1)
+
+  override def inputTypes: Seq[AbstractDataType] = Seq(TypeCollection(StringType, BinaryType))
 
   override def nullable: Boolean = true
 
   override def eval(inputRow: InternalRow): Any = {
-    (inputExpressions.head.eval(inputRow)) match {
+    (inputExpressions.eval(inputRow)) match {
       case (geomString: UTF8String) => {
         // Parse UTF-8 encoded wkb string
         val fileDataSplitter = FileDataSplitter.WKB
@@ -256,11 +278,21 @@ case class ST_GeomFromWKB(inputExpressions: Seq[Expression])
     }
   }
 
+//  override def checkInputDataTypes(): TypeCheckResult = {
+//    if (inputExpressions.length != 1) {
+//      TypeCheckResult.TypeCheckFailure("ST_GeomFromWKB function requires one argument")
+//    } else
+//    if (!Seq(StringType, BinaryType).contains(inputExpressions.head.dataType)) {
+//      TypeCheckResult.TypeCheckFailure("input to function ST_GeomFromWKB should be of type ")
+//    }
+//    TypeCheckResult.TypeCheckSuccess
+//  }
+
   override def dataType: DataType = GeometryUDT
-
-  override def children: Seq[Expression] = inputExpressions
-
-  protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]) = {
+  override def child: Expression = inputExpressions
+//  override def children: Expression = inputExpressions
+//
+  protected def withNewChildInternal(newChildren: Expression) = {
     copy(inputExpressions = newChildren)
   }
 }

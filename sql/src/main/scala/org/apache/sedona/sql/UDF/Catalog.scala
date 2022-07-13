@@ -17,8 +17,9 @@
  * under the License.
  */
 package org.apache.sedona.sql.UDF
-
+import scala.reflect.runtime.universe._
 import org.apache.spark.sql.catalyst.analysis.FunctionRegistry.FunctionBuilder
+import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.expressions.{Aggregator, UserDefinedAggregateFunction}
 import org.apache.spark.sql.sedona_sql.expressions.{ST_YMax, ST_YMin, _}
 import org.apache.spark.sql.sedona_sql.expressions.collect.{ST_Collect, ST_CollectionExtract}
@@ -26,15 +27,15 @@ import org.apache.spark.sql.sedona_sql.expressions.raster.{RS_Add, RS_Append, RS
 import org.locationtech.jts.geom.Geometry
 
 object Catalog {
-  val expressions: Seq[FunctionBuilder] = Seq(
+  val expressions = Seq(
     // Expression for vectors
     ST_PointFromText,
     ST_PolygonFromText,
     ST_LineStringFromText,
     ST_GeomFromText,
     ST_LineFromText,
-    ST_GeomFromWKT,
-    ST_GeomFromWKB,
+//    ST_GeomFromWKT,
+//    ST_GeomFromWKB,
     ST_GeomFromGeoJSON,
     ST_Point,
     ST_PolygonFromEnvelope,

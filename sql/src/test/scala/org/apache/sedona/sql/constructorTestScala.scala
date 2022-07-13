@@ -22,6 +22,7 @@ package org.apache.sedona.sql
 import org.apache.sedona.core.formatMapper.GeoJsonReader
 import org.apache.sedona.core.formatMapper.shapefileParser.ShapefileReader
 import org.apache.sedona.sql.utils.Adapter
+import org.apache.spark.sql.AnalysisException
 import org.locationtech.jts.geom.Geometry
 
 class constructorTestScala extends TestBaseScala {
@@ -69,6 +70,10 @@ class constructorTestScala extends TestBaseScala {
       assert(polygonDf.count() == 100)
       val nullGeom = sparkSession.sql("select ST_GeomFromWKT(null)")
       assert(nullGeom.first().isNullAt(0))
+      val caught = intercept[AnalysisException] {
+        sparkSession.sql("select ST_GeomFromText(1)").show()
+      }
+      assert(caught.getMessage() == "hej")
     }
 
     it("Passed ST_LineFromText") {
@@ -133,6 +138,10 @@ class constructorTestScala extends TestBaseScala {
       // null input
       val nullGeom = sparkSession.sql("SELECT ST_GeomFromWKB(null)")
       assert(nullGeom.first().isNullAt(0))
+      val caught = intercept[AnalysisException] {
+        sparkSession.sql("select ST_GeomFromWKB(1)").show()
+      }
+      assert(caught.getMessage() == "hej")
     }
 
     it("Passed ST_GeomFromGeoJSON") {
