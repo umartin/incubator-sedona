@@ -234,6 +234,24 @@ class predicateJoinTestScala extends TestBaseScala {
       assert(distanceJoinDf.count() == 2998)
     }
 
+    // SEDONA-178
+    it("Passed ST_Distance < radius with linestring in a join") {
+      assert(sparkSession.sql(
+        """
+          |select *, st_distance(a.geom, b.geom)
+          |from (select ST_LineFromText('Linestring(1 1, 1 3, 3 3)') as geom) a
+          |join (select st_point(2.0,2.0) as geom) b
+          |on st_distance(a.geom, b.geom) < 0.1
+          |""".stripMargin).isEmpty)
+      assert(sparkSession.sql(
+        """
+          |select *, st_distance(a.geom, b.geom)
+          |from (select ST_LineFromText('Linestring(1 1, 1 4)') as geom) a
+          |join (select st_point(1.0,5.0) as geom) b
+          |on st_distance(a.geom, b.geom) < 1.5
+          |""".stripMargin).count() == 1)
+    }
+
     it("Passed ST_Contains in a range and join") {
       var polygonCsvDf = sparkSession.read.format("csv").option("delimiter", ",").option("header", "false").load(csvPolygonInputLocation)
       polygonCsvDf.createOrReplaceTempView("polygontable")

@@ -18,7 +18,7 @@
  */
 package org.apache.spark.sql.sedona_sql.strategy.join
 
-import org.apache.sedona.common.geometryObjects.Circle
+import org.apache.sedona.common.geometryObjects.BufferedGeometry
 import org.apache.sedona.core.spatialRDD.SpatialRDD
 import org.apache.sedona.sql.utils.GeometrySerializer
 import org.apache.spark.internal.Logging
@@ -57,9 +57,9 @@ case class DistanceJoinExec(left: SparkPlan,
       rdd
         .map { x => {
           val shape = GeometrySerializer.deserialize(shapeExpression.eval(x).asInstanceOf[ArrayData])
-          val circle = new Circle(shape, boundRadius.eval(x).asInstanceOf[Double])
-          circle.setUserData(x.copy)
-          circle.asInstanceOf[Geometry]
+          val bufferedGeometry = new BufferedGeometry(shape, boundRadius.eval(x).asInstanceOf[Double])
+          bufferedGeometry.setUserData(x.copy)
+          bufferedGeometry.asInstanceOf[Geometry]
         }
         }
         .toJavaRDD())

@@ -25,6 +25,7 @@ import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import org.apache.log4j.Logger;
+import org.apache.sedona.common.geometryObjects.BufferedGeometry;
 import org.apache.sedona.common.geometryObjects.Circle;
 import org.apache.sedona.core.formatMapper.shapefileParser.parseUtils.shp.ShapeSerde;
 import org.locationtech.jts.geom.Envelope;
@@ -88,6 +89,13 @@ public class GeometrySerde
             out.writeDouble(envelope.getMinY());
             out.writeDouble(envelope.getMaxY());
         }
+        else if (object instanceof BufferedGeometry) {
+            BufferedGeometry geom = (BufferedGeometry) object;
+            writeType(out, Type.BUFFERED_GEOMETRY);
+            out.writeDouble(geom.getBufferSize());
+            writeGeometry(kryo, out, geom.getWrappedGeometry());
+            writeUserData(kryo, out, geom);
+        }
         else {
             throw new UnsupportedOperationException("Cannot serialize object of type " +
                     object.getClass().getName());
@@ -149,6 +157,15 @@ public class GeometrySerde
                 double yMax = input.readDouble();
                 return new Envelope(xMin, xMax, yMin, yMax);
             }
+            case BUFFERED_GEOMETRY: {
+                double radius = input.readDouble();
+                Geometry wrappedGeometry = readGeometry(kryo, input);
+                Object userData = readUserData(kryo, input);
+
+                BufferedGeometry bufferedGeometry = new BufferedGeometry(wrappedGeometry, radius);
+                bufferedGeometry.setUserData(userData);
+                return bufferedGeometry;
+            }
             default:
                 throw new UnsupportedOperationException(
                         "Cannot deserialize object of type " + geometryType);
@@ -177,7 +194,9 @@ public class GeometrySerde
         SHAPE(0),
         CIRCLE(1),
         GEOMETRYCOLLECTION(2),
-        ENVELOPE(3);
+        ENVELOPE(3),
+        BUFFERED_GEOMETRY(4),
+        ;
 
         private final int id;
 
