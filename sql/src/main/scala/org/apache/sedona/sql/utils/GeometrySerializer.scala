@@ -45,8 +45,12 @@ object GeometrySerializer {
     * @param values ArrayData 
     * @return JTS geometry
     */
-  def deserialize(values: ArrayData): Geometry = {
+  def deserialize(values: Any): Geometry = {
     val reader = new WKBReader()
-    reader.read(values.toByteArray())
+    values match {
+      case bytes: Array[Byte] => reader.read(bytes)
+      case arrayData: ArrayData => reader.read(arrayData.toByteArray())
+      case _ => null
+    }
   }
 }

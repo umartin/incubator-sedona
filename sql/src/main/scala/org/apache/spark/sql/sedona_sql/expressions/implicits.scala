@@ -29,12 +29,7 @@ import org.locationtech.jts.geom.{Geometry, GeometryFactory, Point}
 object implicits {
 
   implicit class InputExpressionEnhancer(inputExpression: Expression) {
-    def toGeometry(input: InternalRow): Geometry = {
-      inputExpression.eval(input).asInstanceOf[ArrayData] match {
-        case arrData: ArrayData => GeometrySerializer.deserialize(arrData)
-        case _ => null
-      }
-    }
+    def toGeometry(input: InternalRow): Geometry = GeometrySerializer.deserialize(inputExpression.eval(input))
 
     def toInt(input: InternalRow): Int = {
       inputExpression.eval(input).asInstanceOf[Int]
@@ -63,20 +58,14 @@ object implicits {
     }
   }
 
-  implicit class ArrayDataEnhancer(arrayData: ArrayData) {
-    def toGeometry: Geometry = {
-      arrayData match {
-        case arrData: ArrayData => GeometrySerializer.deserialize(arrData)
-        case _ => null
-      }
-    }
+  implicit class ArrayDataEnhancer(arrayData: Any) {
+    def toGeometry: Geometry =  GeometrySerializer.deserialize(arrayData)
   }
 
   implicit class GeometryEnhancer(geom: Geometry) {
     private val geometryFactory = new GeometryFactory()
 
-    def toGenericArrayData: GenericArrayData =
-      new GenericArrayData(GeometrySerializer.serialize(geom))
+    def toGenericArrayData: Array[Byte] = GeometrySerializer.serialize(geom)
 
     def getPoints: Array[Point] =
       geom.getCoordinates.map(coordinate => geometryFactory.createPoint(coordinate))

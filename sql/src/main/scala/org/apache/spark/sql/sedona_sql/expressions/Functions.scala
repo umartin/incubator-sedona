@@ -23,7 +23,7 @@ import org.apache.sedona.sql.utils.GeometrySerializer
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenFallback
 import org.apache.spark.sql.catalyst.expressions.{Expression, Generator, ImplicitCastInputTypes}
-import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
+import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.sedona_sql.UDT.GeometryUDT
 import org.apache.spark.sql.sedona_sql.expressions.collect.Collect
 import org.apache.spark.sql.sedona_sql.expressions.implicits._
@@ -769,7 +769,7 @@ case class ST_MakePolygon(inputExpressions: Seq[Expression])
     val numOfElements = possibleHolesRaw.map(_.numElements()).getOrElse(0)
 
     val holes = (0 until numOfElements).map(el => possibleHolesRaw match {
-      case Some(value) => Some(value.getArray(el))
+      case Some(value) => Some(value.getBinary(el))
       case None => None
     }).filter(_.nonEmpty)
       .map(el => el.map(_.toGeometry))
@@ -833,7 +833,7 @@ case class ST_SymDifference(inputExpressions: Seq[Expression])
   extends BinaryGeometryExpression with FoldableExpression with CodegenFallback {
 
   override protected def nullSafeEval(leftGeometry: Geometry, rightGeometry: Geometry): Any = {
-    new GenericArrayData(GeometrySerializer.serialize(leftGeometry.symDifference(rightGeometry)))
+    leftGeometry.symDifference(rightGeometry).toGenericArrayData
   }
 
   override def dataType: DataType = GeometryUDT
@@ -854,7 +854,7 @@ case class ST_Union(inputExpressions: Seq[Expression])
   extends BinaryGeometryExpression with FoldableExpression with CodegenFallback {
 
   override protected def nullSafeEval(leftGeometry: Geometry, rightGeometry: Geometry): Any = {
-    new GenericArrayData(GeometrySerializer.serialize(leftGeometry.union(rightGeometry)))
+    leftGeometry.union(rightGeometry).toGenericArrayData
   }
 
   override def dataType: DataType = GeometryUDT

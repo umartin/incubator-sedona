@@ -41,7 +41,7 @@ trait TraitJoinQueryBase {
     spatialRdd.setRawSpatialRDD(
       rdd
         .map { x => {
-          val shape = GeometrySerializer.deserialize(shapeExpression.eval(x).asInstanceOf[ArrayData])
+          val shape = GeometrySerializer.deserialize(shapeExpression.eval(x))
           //logInfo(shape.toString)
           shape.setUserData(x.copy)
           shape
@@ -56,7 +56,7 @@ trait TraitJoinQueryBase {
     spatialRdd.setRawSpatialRDD(
       rdd
         .map { x => {
-          val shape = GeometrySerializer.deserialize(shapeExpression.eval(x).asInstanceOf[ArrayData])
+          val shape = GeometrySerializer.deserialize(shapeExpression.eval(x))
           val envelope = shape.getEnvelopeInternal.copy()
           envelope.expandBy(boundRadius.eval(x).asInstanceOf[Double])
 
