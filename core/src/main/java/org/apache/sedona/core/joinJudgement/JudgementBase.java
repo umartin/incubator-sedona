@@ -106,18 +106,16 @@ abstract class JudgementBase
      */
     protected void initPartition()
     {
-        if (dedupParams == null) {
-            return;
-        }
+        if (dedupParams != null) {
+            final int partitionId = TaskContext.getPartitionId();
 
-        final int partitionId = TaskContext.getPartitionId();
-
-        final List<Envelope> partitionExtents = dedupParams.get().getPartitionExtents();
-        if (partitionId < partitionExtents.size()) {
-            extent = new HalfOpenRectangle(partitionExtents.get(partitionId));
-        }
-        else {
-            log.warn("Didn't find partition extent for this partition: " + partitionId);
+            final List<Envelope> partitionExtents = dedupParams.get().getPartitionExtents();
+            if (partitionId < partitionExtents.size()) {
+                extent = new HalfOpenRectangle(partitionExtents.get(partitionId));
+            }
+            else {
+                log.warn("Didn't find partition extent for this partition: " + partitionId);
+            }
         }
         matcher = JoinConditionMatcher.create(spatialPredicate);
     }

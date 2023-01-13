@@ -1430,4 +1430,19 @@ class BroadcastIndexJoinSuite extends TestBaseScala {
       assert(df.queryExecution.sparkPlan.collect { case p: BroadcastIndexJoinExec => p }.size === 0)
     }
   }
+
+  describe("LOL") {
+    it("lol") {
+      import sparkSession.implicits._
+      val df1 = Seq("1", "2", "3", "4").toDF("seq").withColumn("geom1", expr("st_point(1.0, 1.0)"))
+      val df12 = df1.withColumn("geom1", when(expr("seq = 4"), null).otherwise($"geom1"))
+      val df2 = Seq("POLYGON((2 0, 2 2, 0 2, 0 0, 2 0))").toDF("geom2").withColumn("geom2", expr("st_geomfromtext(geom2)"))
+      val df = df12.join(broadcast(df2), expr("st_intersects(geom1, geom2)"), "left")
+      df.show()
+      df.explain(true)
+      assert(df.queryExecution.sparkPlan.collect { case p: BroadcastIndexJoinExec => p }.size === 1)
+
+
+    }
+  }
 }

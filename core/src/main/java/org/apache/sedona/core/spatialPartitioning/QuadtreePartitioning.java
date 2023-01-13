@@ -43,13 +43,11 @@ public class QuadtreePartitioning
      * @param partitions the partitions
      */
     public QuadtreePartitioning(List<Envelope> samples, Envelope boundary, int partitions)
-            throws Exception
     {
         this(samples, boundary, partitions, -1);
     }
 
     public QuadtreePartitioning(List<Envelope> samples, Envelope boundary, final int partitions, int minTreeLevel)
-            throws Exception
     {
         // Make sure the tree doesn't get too deep in case of data skew
         int maxLevel = partitions;

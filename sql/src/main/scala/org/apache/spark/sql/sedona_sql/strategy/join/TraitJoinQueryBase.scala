@@ -18,6 +18,7 @@
  */
 package org.apache.spark.sql.sedona_sql.strategy.join
 
+import org.apache.sedona.core.spatialPartitioning.NewSchool
 import org.apache.sedona.core.spatialRDD.SpatialRDD
 import org.apache.sedona.core.utils.SedonaConf
 import org.apache.sedona.sql.utils.GeometrySerializer
@@ -72,8 +73,9 @@ trait TraitJoinQueryBase {
   def doSpatialPartitioning(dominantShapes: SpatialRDD[Geometry], followerShapes: SpatialRDD[Geometry],
                             numPartitions: Integer, sedonaConf: SedonaConf): Unit = {
     if (dominantShapes.approximateTotalCount > 0) {
-      dominantShapes.spatialPartitioning(sedonaConf.getJoinGridType, numPartitions)
-      followerShapes.spatialPartitioning(dominantShapes.getPartitioner)
+      new NewSchool(dominantShapes, followerShapes, numPartitions, sedonaConf.getJoinGridType).newschhol()
+      //dominantShapes.spatialPartitioning(sedonaConf.getJoinGridType, numPartitions)
+      //followerShapes.spatialPartitioning(dominantShapes.getPartitioner)
     }
   }
 }

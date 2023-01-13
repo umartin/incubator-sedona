@@ -119,7 +119,7 @@ public class SpatialRDD<T extends Geometry>
      * The target epgsg code.
      */
     protected String targetEpgsgCode = "";
-    private SpatialPartitioner partitioner;
+    public SpatialPartitioner partitioner;
     /**
      * The sample number.
      */

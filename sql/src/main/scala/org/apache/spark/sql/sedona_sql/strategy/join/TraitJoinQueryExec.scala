@@ -22,6 +22,7 @@ import org.apache.sedona.core.enums.JoinSparitionDominantSide
 import org.apache.sedona.core.spatialOperator.JoinQuery
 import org.apache.sedona.core.spatialOperator.JoinQuery.JoinParams
 import org.apache.sedona.core.spatialOperator.SpatialPredicate
+import org.apache.sedona.core.spatialRDD.SpatialRDD
 import org.apache.sedona.core.utils.SedonaConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
@@ -72,43 +73,14 @@ trait TraitJoinQueryExec extends TraitJoinQueryBase {
     var numPartitions = -1
     try {
       if (sedonaConf.getJoinSparitionDominantSide == JoinSparitionDominantSide.LEFT) {
-        if (sedonaConf.getFallbackPartitionNum != -1) {
-          numPartitions = sedonaConf.getFallbackPartitionNum
-        }
-        else {
-          numPartitions = joinPartitionNumOptimizer(leftShapes.rawSpatialRDD.partitions.size(), rightShapes.rawSpatialRDD.partitions.size(),
-            leftShapes.approximateTotalCount)
-        }
+        numPartitions = getNumberOfPartitions(leftShapes, rightShapes)
         doSpatialPartitioning(leftShapes, rightShapes, numPartitions, sedonaConf)
       }
       else {
-        if (sedonaConf.getFallbackPartitionNum != -1) {
-          numPartitions = sedonaConf.getFallbackPartitionNum
-        }
-        else {
-          numPartitions = rightShapes.rawSpatialRDD.partitions.size()
-          numPartitions = joinPartitionNumOptimizer(rightShapes.rawSpatialRDD.partitions.size(), leftShapes.rawSpatialRDD.partitions.size(),
-            rightShapes.approximateTotalCount)
-        }
+        numPartitions = getNumberOfPartitions(rightShapes, leftShapes)
         doSpatialPartitioning(rightShapes, leftShapes, numPartitions, sedonaConf)
       }
     }
-    catch {
-      case e: IllegalArgumentException => {
-        print(e.getMessage)
-        // Partition number are not qualified
-        // Use fallback num partitions specified in SedonaConf
-        if (sedonaConf.getJoinSparitionDominantSide == JoinSparitionDominantSide.LEFT) {
-          numPartitions = sedonaConf.getFallbackPartitionNum
-          doSpatialPartitioning(leftShapes, rightShapes, numPartitions, sedonaConf)
-        }
-        else {
-          numPartitions = sedonaConf.getFallbackPartitionNum
-          doSpatialPartitioning(rightShapes, leftShapes, numPartitions, sedonaConf)
-        }
-      }
-    }
-
 
     val joinParams = new JoinParams(sedonaConf.getUseIndex, spatialPredicate, sedonaConf.getIndexType, sedonaConf.getJoinBuildSide)
 
@@ -148,7 +120,21 @@ trait TraitJoinQueryExec extends TraitJoinQueryBase {
     }
   }
 
-  def joinPartitionNumOptimizer(dominantSidePartNum: Int, followerSidePartNum: Int, dominantSideCount: Long): Int = {
+  private def getNumberOfPartitions(dominant: SpatialRDD[Geometry], follower: SpatialRDD[Geometry]): Int = {
+    val fallbackPartitionNum = SedonaConf.fromActiveSession.getFallbackPartitionNum
+    if (fallbackPartitionNum == -1) {
+      // Number of partitions not defined in config.
+      joinPartitionNumOptimizer(dominant.rawSpatialRDD.partitions.size(), follower.rawSpatialRDD.partitions.size(),
+        dominant.approximateTotalCount)
+    } else {
+      // Number of partitions set in config but might be higher than the maximum allowed.
+      // Actual number of partitions might be lower.
+      val maxAllowedPartitions: Int = (dominant.approximateTotalCount / 2.0).floor.intValue() - 1
+      Math.max(1, Math.min(fallbackPartitionNum, maxAllowedPartitions))
+    }
+  }
+
+  private def joinPartitionNumOptimizer(dominantSidePartNum: Int, followerSidePartNum: Int, dominantSideCount: Long): Int = {
     log.info("[SedonaSQL] Dominant side count: " + dominantSideCount)
     var numPartition = -1
     var candidatePartitionNum = (dominantSideCount / 2).intValue()

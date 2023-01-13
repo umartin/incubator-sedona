@@ -37,7 +37,6 @@ abstract public class SpatialPartitioner
         extends Partitioner
         implements Serializable
 {
-
     protected final GridType gridType;
     protected final List<Envelope> grids;
 
@@ -74,5 +73,10 @@ abstract public class SpatialPartitioner
     public int getPartition(Object key)
     {
         return (int) key;
+    }
+
+    @Override
+    public int numPartitions() {
+        return grids.size();
     }
 }

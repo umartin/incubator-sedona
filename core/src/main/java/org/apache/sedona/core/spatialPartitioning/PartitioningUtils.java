@@ -18,12 +18,13 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import scala.Tuple2;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-public abstract class PartitioningUtils {
+public abstract class PartitioningUtils implements Serializable {
     // Check the geom against the partition tree to find the ids of overlapping grids
     public abstract Iterator<Tuple2<Integer, Geometry>> placeObject(Geometry geometry);
     // Check the geom against the partition tree to find the ids of overlapping grids. Only return IDs
