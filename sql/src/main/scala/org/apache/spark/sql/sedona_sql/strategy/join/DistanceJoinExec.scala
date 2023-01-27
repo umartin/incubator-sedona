@@ -23,6 +23,7 @@ import org.apache.sedona.core.spatialRDD.SpatialRDD
 import org.apache.spark.internal.Logging
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.{BindReferences, Expression, UnsafeRow}
+import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.sedona_sql.execution.SedonaBinaryExecNode
 import org.locationtech.jts.geom.Geometry
@@ -51,7 +52,6 @@ case class DistanceJoinExec(left: SparkPlan,
                             right: SparkPlan,
                             leftShape: Expression,
                             rightShape: Expression,
-                            swappedLeftAndRight: Boolean,
                             distance: Expression,
                             spatialPredicate: SpatialPredicate,
                             extraCondition: Option[Expression] = None)
@@ -59,14 +59,16 @@ case class DistanceJoinExec(left: SparkPlan,
     with TraitJoinQueryExec
     with Logging {
 
-  private val boundRadius = BindReferences.bindReference(distance, left.output)
-
   override def toSpatialRddPair(
                                  buildRdd: RDD[UnsafeRow],
                                  buildExpr: Expression,
                                  streamedRdd: RDD[UnsafeRow],
                                  streamedExpr: Expression): (SpatialRDD[Geometry], SpatialRDD[Geometry]) =
-    (toExpandedEnvelopeRDD(buildRdd, buildExpr, boundRadius), toSpatialRDD(streamedRdd, streamedExpr))
+    if (distance.references.isEmpty || distance.references.forall(left.output.contains(_))) {
+      (toExpandedEnvelopeRDD(buildRdd, buildExpr, BindReferences.bindReference(distance, left.output)), toSpatialRDD(streamedRdd, streamedExpr))
+    } else {
+      (toSpatialRDD(streamedRdd, streamedExpr), toExpandedEnvelopeRDD(buildRdd, buildExpr, BindReferences.bindReference(distance, right.output)))
+    }
 
   protected def withNewChildrenInternal(newLeft: SparkPlan, newRight: SparkPlan): SparkPlan = {
     copy(left = newLeft, right = newRight)

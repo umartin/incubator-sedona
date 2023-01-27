@@ -163,14 +163,21 @@ class JoinQueryDetector(sparkSession: SparkSession) extends Strategy {
   private def matches(expr: Expression, plan: LogicalPlan): Boolean =
     expr.references.nonEmpty && expr.references.forall(plan.outputSet.contains(_))
 
+  /**
+   * The exressions of the ST_Predicate must match the plans.
+   *
+   * For example 'select * from a join b on st_covers(b.geom, a.geom)'
+   * becomes 'select * from a join b on st_covered_by(a.geom, b.geom)'
+   */
   private def matchExpressionsToPlans(exprA: Expression,
                                       exprB: Expression,
                                       planA: LogicalPlan,
-                                      planB: LogicalPlan): Option[(LogicalPlan, LogicalPlan, Boolean)] =
+                                      planB: LogicalPlan,
+                                      spatialPredicate: SpatialPredicate): Option[(Expression, Expression, SpatialPredicate, Boolean)] =
     if (matches(exprA, planA) && matches(exprB, planB)) {
-      Some((planA, planB, false))
+      Some((exprA, exprB, spatialPredicate, false))
     } else if (matches(exprA, planB) && matches(exprB, planA)) {
-      Some((planB, planA, true))
+      Some((exprB, exprA, SpatialPredicate.inverse(spatialPredicate), true))
     } else {
       None
     }
@@ -192,10 +199,10 @@ class JoinQueryDetector(sparkSession: SparkSession) extends Strategy {
 
     val relationship = s"ST_$spatialPredicate"
 
-    matchExpressionsToPlans(a, b, left, right) match {
-      case Some((planA, planB, swappedLeftAndRight)) =>
+    matchExpressionsToPlans(a, b, left, right, spatialPredicate) match {
+      case Some((exprLeft, exprRight, spatialPredicate, _)) =>
         logInfo(s"Planning spatial join for $relationship relationship")
-        RangeJoinExec(planLater(planA), planLater(planB), a, b, swappedLeftAndRight, spatialPredicate, extraCondition) :: Nil
+        RangeJoinExec(planLater(left), planLater(right), exprLeft, exprRight, spatialPredicate, extraCondition) :: Nil
       case None =>
         logInfo(
           s"Spatial join for $relationship with arguments not aligned " +
@@ -220,14 +227,11 @@ class JoinQueryDetector(sparkSession: SparkSession) extends Strategy {
     val a = children.head
     val b = children.tail.head
 
-    matchExpressionsToPlans(a, b, left, right) match {
-      case Some((planA, planB, swappedLeftAndRight)) =>
-        if (distance.references.isEmpty || matches(distance, planA)) {
+    matchExpressionsToPlans(a, b, left, right, spatialPredicate) match {
+      case Some((exprA, exprB, spatialPredicate, _)) =>
+        if (distance.references.isEmpty || matches(distance, left) || matches(distance, right)) {
           logInfo("Planning spatial distance join")
-          DistanceJoinExec(planLater(planA), planLater(planB), a, b, swappedLeftAndRight, distance, spatialPredicate, extraCondition) :: Nil
-        } else if (matches(distance, planB)) {
-          logInfo("Planning spatial distance join")
-          DistanceJoinExec(planLater(planB), planLater(planA), b, a, swappedLeftAndRight, distance, spatialPredicate, extraCondition) :: Nil
+          DistanceJoinExec(planLater(left), planLater(right), exprA, exprB, distance, spatialPredicate, extraCondition) :: Nil
         } else {
           logInfo(
             "Spatial distance join for ST_Distance with non-scalar distance " +
@@ -277,8 +281,8 @@ class JoinQueryDetector(sparkSession: SparkSession) extends Strategy {
       case (None, _) => s"ST_$spatialPredicate"
     }
 
-    matchExpressionsToPlans(a, b, left, right) match {
-      case Some((_, _, swapped)) =>
+    matchExpressionsToPlans(a, b, left, right, spatialPredicate) match {
+      case Some((_, _, _, swapped)) =>
         logInfo(s"Planning spatial join for $relationship relationship")
         val (leftPlan, rightPlan, streamShape, windowSide) = (broadcastSide.get, swapped) match {
           case (LeftSide, false) => // Broadcast the left side, windows on the left
